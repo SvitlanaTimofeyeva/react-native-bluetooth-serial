@@ -336,7 +336,7 @@ class RCTBluetoothSerialService {
                 for (int i = 0; i < buffer.length; i++) {
                     if (i == 0) buffer[i] = (byte)1;
                     if (i == 1) buffer[i] = (byte)1;
-                    if (i == 2) buffer[i] = (byte)254;
+                    if (i == 2) buffer[i] = (byte)127;
                     if (i == 3) buffer[i] = (byte)199;
                     if (i == 126) buffer[i] = (byte)checksum;
                     if (i == 127) buffer[i] = (byte) (checksum >>> 8);
