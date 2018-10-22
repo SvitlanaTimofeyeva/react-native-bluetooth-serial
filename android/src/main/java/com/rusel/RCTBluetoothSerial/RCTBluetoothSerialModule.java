@@ -448,9 +448,9 @@ public class RCTBluetoothSerialModule extends ReactContextBaseJavaModule impleme
         String data = mBuffer.substring(0, length);
         mBuffer.delete(0, length);
 
-        deviceData.putDouble("temp1 ", temp1Float);
-        deviceData.putInt("batteryVolts ", voltsNum);
-        deviceData.putInt("commandId ", commandId);
+        deviceData.putDouble("temp1", temp1Float);
+        deviceData.putInt("batteryVolts", voltsNum);
+        deviceData.putInt("commandId", commandId);
 
         promise.resolve(deviceData);
     }
@@ -626,9 +626,9 @@ public class RCTBluetoothSerialModule extends ReactContextBaseJavaModule impleme
 
             mBuffer.delete(0, length);
 
-            deviceData.putDouble("temp1 ", temp1Float);
-            deviceData.putInt("batteryVolts ", voltsNum);
-            deviceData.putInt("commandId ", commandId);
+            deviceData.putDouble("temp1", temp1Float);
+            deviceData.putInt("batteryVolts", voltsNum);
+            deviceData.putInt("commandId", commandId);
 
             if (commandId == 1 || commandId == 3) {
                 sendEvent(DEVICE_READ, deviceData);
