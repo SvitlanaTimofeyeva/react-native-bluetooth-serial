@@ -3,6 +3,7 @@ package com.rusel.RCTBluetoothSerial;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
+import java.util.Arrays;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -296,16 +297,18 @@ class RCTBluetoothSerialService {
 
         public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[128];
             int bytes;
 
             // Keep listening to the InputStream while connected
             while (true) {
                 try {
                     bytes = mmInStream.read(buffer); // Read from the InputStream
+                    System.out.println(Arrays.toString(buffer));
+
                     String data = new String(buffer, 0, bytes, "ISO-8859-1");
 
-                    mModule.onData(data); // Send the new data String to the UI Activity
+                    mModule.onData(data, buffer); // Send the new data String to the UI Activity
                 } catch (Exception e) {
                     Log.e(TAG, "disconnected", e);
                     mModule.onError(e);
@@ -324,6 +327,21 @@ class RCTBluetoothSerialService {
             try {
                 String str = new String(buffer, "UTF-8");
                 if (D) Log.d(TAG, "Write in thread " + str);
+
+                // hardcoded command to avoid passing data from js
+
+                //char checksum = (char)-25638;
+                int checksum = -25638;
+
+                for (int i = 0; i < buffer.length; i++) {
+                    if (i == 0) buffer[i] = (byte)1;
+                    if (i == 1) buffer[i] = (byte)1;
+                    if (i == 2) buffer[i] = (byte)127;
+                    if (i == 3) buffer[i] = (byte)199;
+                    if (i == 126) buffer[i] = (byte)checksum;
+                    if (i == 127) buffer[i] = (byte) (checksum >>> 8);
+
+                }
                 mmOutStream.write(buffer);
             } catch (Exception e) {
                 Log.e(TAG, "Exception during write", e);
