@@ -551,84 +551,91 @@ public class RCTBluetoothSerialModule extends ReactContextBaseJavaModule impleme
      * @param data Message
      */
     void onData (String data, byte[] bytes) {
-        bBuffer = bytes;
-        mBuffer.append(data);
 
-        int length = mBuffer.length();
-        if (D) Log.d(TAG, "Read bytes: " + length);
+        if (bytes.length == 128) {
+            bBuffer = bytes;
+            mBuffer.append(data);
 
-        WritableMap deviceData = Arguments.createMap();
+            int length = mBuffer.length();
+            if (D) Log.d(TAG, "Read bytes: " + length);
 
-        // parse probe data
+            WritableMap deviceData = Arguments.createMap();
 
-        byte commandId = 0;
-        byte[] temp1 = new byte[4];
-        byte[] temp2 = new byte[4];
-        byte[] batteryVolts = new byte[2];
-        byte[] checksum = new byte[2];
+            // parse probe data
 
-        int temp1Counter = 0;
-        int temp2Counter = 0;
-        int batteryCounter = 0;
-        int checksumCounter = 0;
+            byte commandId = 0;
+            byte[] temp1 = new byte[4];
+            byte[] temp2 = new byte[4];
+            byte[] batteryVolts = new byte[2];
+            byte[] checksum = new byte[2];
 
-        for (int i = 0; i < length; i++) {
+            int temp1Counter = 0;
+            int temp2Counter = 0;
+            int batteryCounter = 0;
+            int checksumCounter = 0;
 
-            if (i == 0) {
-                commandId = bBuffer[i];
+            for (int i = 0; i < length; i++) {
+
+                if (i == 0) {
+                    commandId = bBuffer[i];
+                }
+
+                // temp1 sensor reading value
+                if (i >= 54 && i <= 57) {
+                    temp1[temp1Counter] = bBuffer[i];
+                    temp1Counter++;
+                }
+
+                // temp2 sensor reading value
+                if (i >= 74 && i <= 77) {
+                    temp2[temp2Counter] = bBuffer[i];
+                    temp2Counter++;
+                }
+
+                // get battery data
+                if (i >= 94 && i <= 95) {
+                    batteryVolts[batteryCounter] = bBuffer[i];
+                    batteryCounter++;
+                }
+
+                if (i == 126 || i == 127) {
+                    checksum[checksumCounter] = bBuffer[i];
+                    checksumCounter++;
+                }
             }
 
-            // temp1 sensor reading value
-            if (i >= 54 && i <= 57) {
-                temp1[temp1Counter] = bBuffer[i];
-                temp1Counter++;
+            ByteBuffer wrappedTemp1 = ByteBuffer.wrap(temp1);
+            wrappedTemp1.order( ByteOrder.LITTLE_ENDIAN );
+            int temp1Num = wrappedTemp1.getInt();
+
+            ByteBuffer wrappedVolts = ByteBuffer.wrap(batteryVolts);
+            wrappedVolts.order( ByteOrder.LITTLE_ENDIAN );
+            short voltsNum = wrappedVolts.getShort();
+
+            ByteBuffer wrappedChecksum = ByteBuffer.wrap(checksum);
+            wrappedChecksum.order( ByteOrder.LITTLE_ENDIAN );
+            short checksumNum  = wrappedChecksum.getShort();
+
+            float a = 100000;
+            float c = 300;
+            double temp1Float = (temp1Num / a) - c;
+
+            Log.d(TAG, "commandId" + commandId);
+            Log.d(TAG, "temp1" + temp1Float);
+            Log.d(TAG, "battery volts" + voltsNum);
+
+            mBuffer.delete(0, length);
+
+            deviceData.putDouble("temp1 ", temp1Float);
+            deviceData.putInt("batteryVolts ", voltsNum);
+            deviceData.putInt("commandId ", commandId);
+
+            if (commandId == 1 || commandId == 3) {
+                sendEvent(DEVICE_READ, deviceData);
             }
 
-            // temp2 sensor reading value
-            if (i >= 74 && i <= 77) {
-                temp2[temp2Counter] = bBuffer[i];
-                temp2Counter++;
-            }
 
-            // get battery data
-            if (i >= 94 && i <= 95) {
-                batteryVolts[batteryCounter] = bBuffer[i];
-                batteryCounter++;
-            }
-
-            if (i == 126 || i == 127) {
-                checksum[checksumCounter] = bBuffer[i];
-                checksumCounter++;
-            }
         }
-
-        ByteBuffer wrappedTemp1 = ByteBuffer.wrap(temp1);
-        wrappedTemp1.order( ByteOrder.LITTLE_ENDIAN );
-        int temp1Num = wrappedTemp1.getInt();
-
-        ByteBuffer wrappedVolts = ByteBuffer.wrap(batteryVolts);
-        wrappedVolts.order( ByteOrder.LITTLE_ENDIAN );
-        short voltsNum = wrappedVolts.getShort();
-
-        ByteBuffer wrappedChecksum = ByteBuffer.wrap(checksum);
-        wrappedChecksum.order( ByteOrder.LITTLE_ENDIAN );
-        short checksumNum  = wrappedChecksum.getShort();
-
-        float a = 100000;
-        float c = 300;
-        double temp1Float = (temp1Num / a) - c;
-
-        Log.d(TAG, "commandId" + commandId);
-        Log.d(TAG, "temp1" + temp1Float);
-        Log.d(TAG, "battery volts" + voltsNum);
-
-        mBuffer.delete(0, length);
-
-        deviceData.putDouble("temp1 ", temp1Float);
-        deviceData.putInt("batteryVolts ", voltsNum);
-        deviceData.putInt("commandId ", commandId);
-
-        sendEvent(DEVICE_READ, deviceData);
 
         //String completeData = readUntil(this.delimiter);
         //if (completeData != null && completeData.length() > 0) {
