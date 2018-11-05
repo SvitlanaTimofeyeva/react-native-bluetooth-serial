@@ -86,7 +86,7 @@ class RCTBluetoothSerialService {
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    void write(byte[] out) {
+    void write(byte[] out, String type) {
         if (D) Log.d(TAG, "Write in service, state is " + STATE_CONNECTED);
         ConnectedThread r; // Create temporary object
 
@@ -96,7 +96,7 @@ class RCTBluetoothSerialService {
             r = mConnectedThread;
         }
 
-        r.write(out); // Perform the write unsynchronized
+        r.write(out, type); // Perform the write unsynchronized
     }
 
     /**
@@ -323,7 +323,7 @@ class RCTBluetoothSerialService {
          * Write to the connected OutStream.
          * @param buffer  The bytes to write
          */
-        void write(byte[] buffer) {
+        void write(byte[] buffer, String type) {
             try {
                 String str = new String(buffer, "UTF-8");
                 if (D) Log.d(TAG, "Write in thread " + str);
@@ -331,17 +331,29 @@ class RCTBluetoothSerialService {
                 // hardcoded command to avoid passing data from js
 
                 //char checksum = (char)-25638;
-                int checksum = -25638;
+                int checksum = type == "temp" ? -25638 : -24684;
 
                 for (int i = 0; i < buffer.length; i++) {
                     if (i == 0) buffer[i] = (byte)1;
                     if (i == 1) buffer[i] = (byte)1;
-                    if (i == 2) buffer[i] = (byte)127;
+                    if (i == 2) buffer[i] = type == "temp" ? (byte)127 : (byte)0;
                     if (i == 3) buffer[i] = (byte)199;
                     if (i == 126) buffer[i] = (byte)checksum;
                     if (i == 127) buffer[i] = (byte) (checksum >>> 8);
 
                 }
+                // char checksum1 = this.computeChecksum(buffer, 126);
+                mmOutStream.write(buffer);
+            } catch (Exception e) {
+                Log.e(TAG, "Exception during write", e);
+                mModule.onError(e);
+            }
+        }
+
+        void write(byte[] buffer) {
+            try {
+                String str = new String(buffer, "UTF-8");
+                if (D) Log.d(TAG, "Write in thread " + str);
                 mmOutStream.write(buffer);
             } catch (Exception e) {
                 Log.e(TAG, "Exception during write", e);
@@ -356,5 +368,36 @@ class RCTBluetoothSerialService {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
         }
+
+        // TODO: fix checksum function
+//
+//        char calcCRC(byte p, char crc) {
+//            int i;
+//            int tempCRC = crc;
+//            int word = p;
+//
+//            for (i = 0; i < 8; i++) {
+//                int crcin = (((tempCRC ^ word) & 1) << 15);
+//                word = word >> 1;
+//                tempCRC = tempCRC >> 1;
+//                if (crcin != 0) {
+//                    tempCRC = tempCRC ^ (0xa001);
+//                }
+//                crc = (char)tempCRC;
+//            }
+//            return crc;
+//        }
+//
+//        char computeChecksum(byte[] bytes, int numBytes) {
+//            char crc = 0;
+//            for (int i = 0; i < numBytes; i++) {
+//                crc = this.calcCRC(bytes[i], crc);
+//            }
+//
+//            int ncrc = crc;
+//            ncrc = ~ncrc;
+//            ncrc = ncrc & 0xffff;
+//            return (char)ncrc;
+//        }
     }
 }
